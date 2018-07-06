@@ -1,0 +1,29 @@
+version: '3'
+
+services:
+
+  rabbitmq:
+    image: "rabbitmq:3-management"
+    hostname: "rabbit"
+    ports:
+      - "15672:15672"
+      - "5672:5672"
+    labels:
+      NAME: "rabbitmq"
+    volumes:
+      - ./rabbitmq-isolated.conf:/etc/rabbitmq/rabbitmq.config
+
+  vault:
+    container_name: vault.server
+    image: vault
+    ports:
+      - "9200:8200"
+    volumes:
+      - ./etc/vault.server/config:/mnt/vault/config
+      - ./etc/vault.server/data:/mnt/vault/data
+      - ./etc/vault.server/logs:/mnt/vault/logs
+    cap_add:
+      - IPC_LOCK
+    environment:
+      - VAULT_LOCAL_CONFIG={"ui":true,"backend":{"inmem":{}},"listener":{"tcp":{"address":"0.0.0.0:8200","tls_disable":1}}}
+    command: server

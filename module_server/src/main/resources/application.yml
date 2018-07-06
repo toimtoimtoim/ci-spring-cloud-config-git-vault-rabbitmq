@@ -1,0 +1,39 @@
+server.port: 8081
+
+spring:
+  profiles:
+    # to use git as storage use profile: git
+    # for vault as (additional) backend for secrets use profile: vault
+    # to use filesystem instead of git as place to read configuration use profile: native
+    active: git, vault
+
+  application:
+    name: config-server-app
+
+  rabbitmq:
+    host: localhost
+    port: 5672
+
+  cloud:
+    config:
+      server:
+        git:
+          uri: https://github.com/toimtoimtoim/ci-spring-cloud-config-git-vault-rabbitmq-repo.git
+          # to test locally config repo can be cloned to local machine
+#          uri: file:/home/toim/code/ci-spring-cloud-config-git-vault-rabbitmq-repo
+          order: 2
+#          username: gitlab+deploy-token-1 # gitlab allows deploy tokens with basic auth
+#          password: ${GITLAB_DEPLY_TOKEN}
+        vault:
+          host: localhost
+          port: 9200
+          scheme: http
+          connection-timeout: 5000
+          read-timeout: 15000
+          order: 3
+
+management:
+  endpoints:
+    web:
+      exposure:
+        include: '*'
