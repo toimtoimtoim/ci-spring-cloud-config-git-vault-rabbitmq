@@ -101,3 +101,72 @@ Relevant links:
 10. Open Vault [http://localhost:9200/ui] and change `secret/config-client` key 'secret.from.vault' value to something different
 11. Trigger config reload event in config server `curl -X POST http://localhost:8081/actuator/bus-refresh`
 12. Check that config change has propagated to the client app `http://localhost:8080/hello`
+
+## Comparison to other JAVA (Spring) configuration option
+
+### Storing configuration
+
+1. Datasource secrets can be separated from application with [Tomcat JNDI](https://tomcat.apache.org/tomcat-8.0-doc/jndi-datasource-examples-howto.html#Oracle_8i,_9i_&_10g) 
+    Example of configuring datasource in Tomcat `context.xml`:
+    ```xml
+    <Parameter name="log4jConfigLocation" value="file:/home/tomcat1/conf/log4j.xml" override="false" />
+    <Resource name="jdbc/myoracle" auth="Container"
+                  type="javax.sql.DataSource" driverClassName="oracle.jdbc.OracleDriver"
+                  url="jdbc:oracle:thin:@127.0.0.1:1521:mysid"
+                  username="scott" password="tiger" maxTotal="20" maxIdle="10"
+                  maxWaitMillis="-1"/>
+    ```
+    
+    Same datasource configuration reference in application (`web.xml`) conf:
+    ```xml
+        <resource-ref>
+            <description>My Oracle DataSource Reference</description>
+            <res-ref-name>jdbc/myoracle</res-ref-name>
+            <res-type>javax.sql.DataSource</res-type>
+            <res-auth>Container</res-auth>
+        </resource-ref>
+     
+       <!-- entry in Tomcat context.xml will override this -->
+     	<context-param>
+     		<param-name>log4jConfigLocation</param-name>
+     		<param-value>/WEB-INF/log4j.xml</param-value>
+     	</context-param>
+    ```
+    
+    pros:
+    
+        1. Secret (database password in this example) is separated from application code and bundle (war)
+        2. If filesystem permissions are set correctly only application server (Tomcat) can read that info
+
+    cons:
+    
+        1. Configuration is cumbersome to change even though there are tools to automate it (Ansible/Puppet/Chef). Imagine updating conf for 4 node of one Application. Imagine changing database IP for 10 application each having 2 nodes.
+        2. If attacker is able to breach the system in Tomcat rights it has access to all the Tomcat/Application configration files. Even those stored in war (usual spring application.properties/.yml)
+        3. Configuration is cumbersome to use in development. Usually requires specific xml files for dev envs to be commited into code.
+        4. Config change usually requires application restart
+
+2. Pass configuration through JVM system properties or OS environment variables. Spring (boot) has large array of ways externalize configuration: properties files, YAML files, environment variables, and command-line arguments. See this <https://docs.spring.io/spring-boot/docs/current/reference/html/boot-features-external-config.html>
+
+    pros:
+    
+        1. Secret is externalized from application code / bundle
+        2. Large array of ways to provide configuration
+        3. Using OS env variables can be used even with Docker
+        
+    cons:
+    
+        1. Configuration is cumbersome to change even though there are tools to automate it (Ansible/Puppet/Chef). Imagine updating conf for 4 node of one Application. Imagine changing database IP for 10 application each having 2 nodes.
+        2. If attacker is able to breach the system in user rights it has access to all the Tomcat/Application configration files.
+        3. Config change usually requires application restart
+        
+3. Pass configuration through JVM system property referencing config file somewhere i.e. `-Dbuild_properties_location=file:/home/tomcat2/conf/build.properties`
+   
+    pros:
+    
+        1. Secret is externalized from application code / bundle
+        
+    cons:
+    
+        1. Configuration is cumbersome to change even though there are tools to automate it (Ansible/Puppet/Chef). Imagine updating conf for 4 node of one Application. Imagine changing database IP for 10 application each having 2 nodes.
+        2. If attacker is able to breach the system in user rights it has access to all the Tomcat/Application configration files.
+        3. Config change usually requires application restart
